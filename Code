@@ -1,0 +1,75 @@
+import pandas as pd
+import re
+
+# Create the filtered Data
+# Filter the attached/linked file and keep the following columns only: STATION, NAME/LOCATION, DATE, AWND, SNOW.
+weather_data = pd.read_csv('Data.csv')
+filtered_weather = weather_data[['STATION', 'NAME', 'DATE', 'AWND', 'SNOW']]
+filtered_weather.to_csv('filteredData.csv', index=False)
+
+# Average snow per month.
+# For each NAME/LOCATION, calculate the average snow amount per month.
+# Save the results in two separate .csv files (one for 2016 and the other for 2017)
+# name the files average2016.csv and average2017.csv
+
+df = pd.read_csv('filteredData.csv')
+
+df['DATE'] = pd.to_datetime(df['DATE'])
+df['year'] = df['DATE'].dt.year
+df['month'] = df['DATE'].dt.month
+
+df = df.sort_values(['NAME', 'month'])
+
+df = (df[df.year.between(2016, 2017)]  # Only 2016 and 2017
+      .groupby(['year', 'month', 'NAME'], sort=True)['SNOW']
+      .mean().reset_index())
+
+for year, gp in df.groupby('year'):  # Write files separately by year
+    gp[['NAME', 'month', 'SNOW']].to_csv(f'average{year}.csv', index=False)
+
+# Total the snow per month for 2016 and 2017
+# For each NAME/LOCATION, calculate the total/ sum snow amount per month.
+# Save the results in two separate .csv files (one for 2016 and the other for 2017)
+# name the files total2016.csv and total2017.csv
+
+df = pd.read_csv('filteredData.csv')
+
+df['DATE'] = pd.to_datetime(df['DATE'])
+df['year'] = df['DATE'].dt.year
+df['month'] = df['DATE'].dt.month
+
+df = df.sort_values(['NAME', 'month'])
+
+df = (df[df.year.between(2016, 2017)]  # Only 2016 and 2017
+      .groupby(['year', 'month', 'NAME'], sort=True)['SNOW']
+      .sum().reset_index())
+
+for year, gp in df.groupby('year'):  # Write files separately by year
+    gp[['NAME', 'month', 'SNOW']].to_csv(f'total{year}.csv', index=False)
+
+# Sort the data in the files average2016.csv  and average2017.csv. Store only the top 3 locations from each file.
+# The top 3 locations data will be stored in one file, name it top3.csv.
+# Each column in the top3.csv file will store the results of each year.
+# Thus, the top3.csv file will have the columns 2016 and 2017.
+
+year_format = re.compile(r'[0-9]{4}')
+result = pd.DataFrame()
+for filename in ['average2016.csv', 'average2017.csv']:
+    file = pd.read_csv(filename)
+
+    all_loc = list(dict(file['NAME'].value_counts()).items())
+    all_loc.sort(key=lambda item: item[1], reverse=True)
+    all_loc = [item[0] for item in all_loc]
+    most_loc = list(all_loc)[:3]
+    year = year_format.search(filename).group()
+    result[year] = most_loc
+result.to_csv('top3.csv', index=False)
+
+# From the 2 year data, find the top 10 readings/rows of AWND.
+# Store the result in a file .csv file and name it top10AWND.csv.
+# The new file will have all columns from filteredData.csv, but only the top 10 AWND.
+
+file = pd.read_csv('filteredData.csv')
+file = file.sort_values('AWND', ascending=False).head(10)
+
+file.to_csv('top10AWND.csv', index=False)
